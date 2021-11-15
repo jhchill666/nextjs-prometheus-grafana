@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-syntax */
+/* eslint-disable no-restricted-syntax, global-require */
 import type { NextApiRequest, NextApiResponse } from "next"
 
 let registry

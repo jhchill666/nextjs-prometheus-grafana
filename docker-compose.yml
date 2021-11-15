@@ -1,4 +1,8 @@
-version: '3.8'
+version: "3.8"
+
+networks:
+  monitoring:
+    driver: bridge
 
 volumes:
   prometheus_data: {}
@@ -6,7 +10,8 @@ volumes:
 
 services:
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v2.20.1
+    container_name: prometheus
     restart: always
     volumes:
       - ./prometheus:/etc/prometheus/
@@ -18,65 +23,48 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
     ports:
       - 9090:9090
-    links:
-      - cadvisor:cadvisor
-      - alertmanager:alertmanager
-    depends_on:
-      - cadvisor
+    networks:
+      - monitoring
 
-  node-exporter:
-    image: prom/node-exporter
+  grafana:
+    image: grafana/grafana:7.1.5
+    container_name: grafana
+    restart: always
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana/grafana.ini/:/etc/grafana/grafana.ini
+    environment:
+      # - GF_AUTH_DISABLE_LOGIN_FORM=true
+      # - GF_AUTH_ANONYMOUS_ENABLED=true
+      # - GF_AUTH_ANONYMOUS_ORG_NAME=myorg
+      # - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      # - GF_USERS_ALLOW_SIGN_UP=false
+
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_BASIC_ENABLED=false
+    ports:
+      - 3001:3000
+    networks:
+      - monitoring
+
+  nodeexporter:
+    image: prom/node-exporter:v0.18.1
+    container_name: nodeexporter
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     command:
       - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
-      - --collector.filesystem.ignored-mount-points
-      - '^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'
-    ports:
-      - 9100:9100
-    restart: always
-    deploy:
-      mode: global
-
-  alertmanager:
-    image: prom/alertmanager
-    restart: always
-    ports:
-      - 9093:9093
-    volumes:
-      - ./alertmanager/:/etc/alertmanager/
-    command:
-      - '--config.file=/etc/alertmanager/config.yml'
-      - '--storage.path=/alertmanager'
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    ports:
-      - 8080:8080
-    restart: always
-    deploy:
-      mode: global
-
-  grafana:
-    image: grafana/grafana
-    user: '472'
-    restart: always
-    environment:
-      GF_INSTALL_PLUGINS: 'grafana-clock-panel,grafana-simple-json-datasource'
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-    env_file:
-      - ./grafana/config.monitoring
-    ports:
-      - 3000:3000
-    depends_on:
-      - prometheus
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    expose:
+      - 9100
+    networks:
+      - monitoring
+    labels:
+      org.label-schema.group: "monitoring"

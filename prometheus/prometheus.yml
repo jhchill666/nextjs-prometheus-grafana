@@ -15,6 +15,7 @@ scrape_configs:
   - job_name: "frontend"
     metrics_path: /api/metrics
     static_configs:
+      # external localhost:3000 target host from within docker
       - targets: ["host.docker.internal:3000"]
         labels:
           group: 'nextjs'

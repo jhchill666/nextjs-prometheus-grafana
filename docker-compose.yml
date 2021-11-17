@@ -9,6 +9,28 @@ volumes:
   grafana_data: {}
 
 services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: ./performance/Dockerfile
+      network: host
+      args:
+        NPMRC: $NPMRC
+        NEXT_PUBLIC_BPAPI_URI: ${NEXT_PUBLIC_BPAPI_URI:-https://www.beautypie-preview.com/graphql}
+        NEXT_PUBLIC_API_URI_INTERNAL: ${NEXT_PUBLIC_API_URI_INTERNAL:-http://host.docker.internal:4000/graphql}
+        BEAUTYPIE_BRANCH_NAME: $BEAUTYPIE_BRANCH_NAME
+        CONTENTFUL_SPACE_ID: $CONTENTFUL_SPACE_ID
+        CONTENTFUL_DELIVERY_API_KEY: $CONTENTFUL_DELIVERY_API_KEY
+        CONTENTFUL_MANAGEMENT_API_KEY: $CONTENTFUL_MANAGEMENT_API_KEY
+        ROBOTS_FILE_OVERRIDE: $ROBOTS_FILE_OVERRIDE
+        GIT_COMMIT_SHA: $GIT_COMMIT_SHA
+        BUILDKIT_INLINE_CACHE: 1
+    ports:
+      - "3000:3000"
+      - "9229:9229"
+    networks:
+      - monitoring
+
   prometheus:
     image: prom/prometheus:v2.20.1
     container_name: prometheus
@@ -35,12 +57,6 @@ services:
       - ./grafana/provisioning/:/etc/grafana/provisioning/
       - ./grafana/grafana.ini/:/etc/grafana/grafana.ini
     environment:
-      # - GF_AUTH_DISABLE_LOGIN_FORM=true
-      # - GF_AUTH_ANONYMOUS_ENABLED=true
-      # - GF_AUTH_ANONYMOUS_ORG_NAME=myorg
-      # - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      # - GF_USERS_ALLOW_SIGN_UP=false
-
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_BASIC_ENABLED=false

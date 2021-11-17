@@ -12,7 +12,7 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: ./performance/Dockerfile
+      dockerfile: ./Dockerfile
       network: host
       args:
         NPMRC: $NPMRC
